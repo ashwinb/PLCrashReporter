@@ -39,7 +39,7 @@ extern "C" {
 #import "PLCrashAsync.h"
 #import "PLCrashAsyncImageList.h"
 #import "PLCrashFrameWalker.h"
-    
+
 #import "PLCrashAsyncSymbolication.h"
 
 #include <uuid/uuid.h>
@@ -93,10 +93,10 @@ typedef struct plcrash_log_writer {
 
         /** The host CPU subtype. */
         uint64_t cpu_subtype;
-        
+
         /** The total number of physical cores */
         uint32_t processor_count;
-        
+
         /** The total number of logical cores */
         uint32_t logical_processor_count;
     } machine_info;
@@ -108,28 +108,34 @@ typedef struct plcrash_log_writer {
 
         /** Application version */
         char *app_version;
+
+        /** Application-specific data */
+        void *app_data;
+
+        /** Application-specific data length */
+        size_t app_data_len;
     } application_info;
-    
+
     /** Process data */
     struct {
         /** Process name (may be null) */
         char *process_name;
-        
+
         /** Process ID */
         pid_t process_id;
-        
+
         /** Process path (may be null) */
         char *process_path;
-        
+
         /** Process start time */
         time_t start_time;
-        
+
         /** Parent process name (may be null) */
         char *parent_process_name;
-        
+
         /** Parent process ID */
         pid_t parent_process_id;
-        
+
         /** If false, the reporting process is being run under process emulation (such as Rosetta). */
         bool native;
     } process_info;
@@ -147,7 +153,7 @@ typedef struct plcrash_log_writer {
 
         /** The original exception call stack (may be null) */
         void **callstack;
-        
+
         /** Call stack frame count, or 0 if the call stack is unavailable */
         size_t callstack_count;
     } uncaught_exception;
@@ -161,10 +167,10 @@ typedef struct plcrash_log_writer {
 typedef struct plcrash_log_bsd_signal_info {
     /** The signal number. */
     int signo;
-    
+
     /** The signal code. */
     int code;
-    
+
     /** The signal address. */
     void *address;
 } plcrash_log_bsd_signal_info_t;
@@ -177,10 +183,10 @@ typedef struct plcrash_log_bsd_signal_info {
 typedef struct plcrash_log_mach_signal_info {
     /** The exception type. */
     exception_type_t type;
-    
+
     /** The exception code(s). */
     mach_exception_data_t code;
-    
+
     /** The number of codes supplied. */
     mach_msg_type_number_t code_count;
 } plcrash_log_mach_signal_info_t;
@@ -200,7 +206,7 @@ typedef struct plcrash_log_signal_info {
      * For more information, refer to the crash_report.proto documentation.
      */
     plcrash_log_bsd_signal_info_t *bsd_info;
-    
+
     /**
      * The Mach exception information. Must be NULL if the signal was not processed via
      * Mach exception handling.
@@ -214,6 +220,7 @@ plcrash_error_t plcrash_log_writer_init (plcrash_log_writer_t *writer,
                                          NSString *app_version,
                                          plcrash_async_symbol_strategy_t symbol_strategy,
                                          BOOL user_requested);
+void plcrash_log_writer_set_app_data (plcrash_log_writer_t *writer, const void *data, size_t len);
 void plcrash_log_writer_set_exception (plcrash_log_writer_t *writer, NSException *exception);
 
 plcrash_error_t plcrash_log_writer_write (plcrash_log_writer_t *writer,
@@ -229,7 +236,7 @@ void plcrash_log_writer_free (plcrash_log_writer_t *writer);
 /**
  * @} plcrash_log_writer
  */
-    
+
 #ifdef __cplusplus
 }
 #endif

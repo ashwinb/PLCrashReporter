@@ -61,7 +61,7 @@ typedef struct PLCrashReporterCallbacks {
     /** The version number of this structure. If not one of the defined version numbers for this type, the behavior
      * is undefined. The current version of this structure is 0. */
     uint16_t version;
-    
+
     /** An arbitrary user-supplied context value. This value may be NULL. */
     void *context;
 
@@ -87,12 +87,12 @@ typedef struct PLCrashReporterCallbacks {
 
     /** YES if the crash reporter has been enabled */
     BOOL _enabled;
-    
+
 #if PLCRASH_FEATURE_MACH_EXCEPTIONS
     /** The backing Mach exception server, if any. Nil if the reporter has not been enabled, or if
      * the configured signal handler type is not PLCrashReporterSignalHandlerTypeMach. */
     PLCrashMachExceptionServer *_machServer;
-    
+
     /** Previously registered Mach exception ports, if any. */
     PLCrashMachExceptionPortSet *_previousMachPorts;
 #endif /* PLCRASH_FEATURE_MACH_EXCEPTIONS */
@@ -127,6 +127,8 @@ typedef struct PLCrashReporterCallbacks {
 
 - (BOOL) enableCrashReporter;
 - (BOOL) enableCrashReporterAndReturnError: (NSError **) outError;
+
+- (void) setApplicationData: (NSData *) data;
 
 - (void) setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
 

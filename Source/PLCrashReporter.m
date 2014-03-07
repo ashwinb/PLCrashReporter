@@ -120,7 +120,7 @@ static plcrash_async_image_list_t shared_image_list;
 
 /**
  * @internal
- * 
+ *
  * Signal handler context (singleton)
  */
 static plcrashreporter_handler_ctx_t signal_handler_context;
@@ -128,7 +128,7 @@ static plcrashreporter_handler_ctx_t signal_handler_context;
 
 /**
  * @internal
- * 
+ *
  * The optional user-supplied callbacks invoked after the crash report has been written.
  */
 static PLCrashReporterCallbacks crashCallbacks = {
@@ -157,10 +157,10 @@ static plcrash_error_t plcrash_write_report (plcrashreporter_handler_ctx_t *sigc
         PLCF_DEBUG("Could not open the crashlog output file: %s", strerror(errno));
         return PLCRASH_EINTERNAL;
     }
-    
+
     /* Initialize the output context */
     plcrash_async_file_init(&file, fd, MAX_REPORT_BYTES);
-    
+
     /* Write the crash log using the already-initialized writer */
     err = plcrash_log_writer_write(&sigctx->writer, crashed_thread, &shared_image_list, &file, siginfo, thread_state);
 
@@ -170,14 +170,14 @@ static plcrash_error_t plcrash_write_report (plcrashreporter_handler_ctx_t *sigc
         plcrash_async_file_close(&file);
         return PLCRASH_EINTERNAL;
     }
-    
+
     /* Finished */
     if (!plcrash_async_file_flush(&file)) {
         PLCF_DEBUG("Failed to flush output file");
         plcrash_async_file_close(&file);
         return PLCRASH_EINTERNAL;
     }
-    
+
     if (!plcrash_async_file_close(&file)) {
         PLCF_DEBUG("Failed to close output file");
         return PLCRASH_EINTERNAL;
@@ -196,7 +196,7 @@ static bool signal_handler_callback (int signal, siginfo_t *info, pl_ucontext_t 
     plcrash_async_thread_state_t thread_state;
     plcrash_log_signal_info_t signal_info;
     plcrash_log_bsd_signal_info_t bsd_signal_info;
-    
+
     /* Remove all signal handlers -- if the crash reporting code fails, the default terminate
      * action will occur.
      *
@@ -209,11 +209,11 @@ static bool signal_handler_callback (int signal, siginfo_t *info, pl_ucontext_t 
      */
     for (int i = 0; i < monitored_signals_count; i++) {
         struct sigaction sa;
-        
+
         memset(&sa, 0, sizeof(sa));
         sa.sa_handler = SIG_DFL;
         sigemptyset(&sa.sa_mask);
-        
+
         sigaction(monitored_signals[i], &sa, NULL);
     }
 
@@ -222,12 +222,12 @@ static bool signal_handler_callback (int signal, siginfo_t *info, pl_ucontext_t 
     // defined as _STRUCT_MCONTEXT64 when building for arm64; this requires the pl_mcontext_t
     // cast.
     plcrash_async_thread_state_mcontext_init(&thread_state, (pl_mcontext_t *) uap->uc_mcontext);
-    
+
     /* Set up the BSD signal info */
     bsd_signal_info.signo = info->si_signo;
     bsd_signal_info.code = info->si_code;
     bsd_signal_info.address = info->si_addr;
-    
+
     signal_info.bsd_info = &bsd_signal_info;
     signal_info.mach_info = NULL;
 
@@ -238,7 +238,7 @@ static bool signal_handler_callback (int signal, siginfo_t *info, pl_ucontext_t 
     /* Call any post-crash callback */
     if (crashCallbacks.handleSignal != NULL)
         crashCallbacks.handleSignal(info, uap, crashCallbacks.context);
-    
+
     return false;
 }
 
@@ -265,7 +265,7 @@ static kern_return_t mach_exception_callback (task_t task, thread_t thread, exce
     /* Let any other registered server attempt to handle the exception */
     if (PLCrashMachExceptionForward(task, thread, exception_type, code, code_count, &sigctx->port_set) == KERN_SUCCESS)
         return KERN_SUCCESS;
-    
+
     /* Set up the BSD signal info */
     siginfo_t si;
     if (!plcrash_async_mach_exception_get_siginfo(exception_type, code, code_count, CPU_TYPE_ANY, &si)) {
@@ -278,13 +278,13 @@ static kern_return_t mach_exception_callback (task_t task, thread_t thread, exce
     bsd_signal_info.address = si.si_addr;
 
     signal_info.bsd_info = &bsd_signal_info;
-    
+
     /* Set up the Mach signal info */
     mach_signal_info.type = exception_type;
     mach_signal_info.code = code;
     mach_signal_info.code_count = code_count;
     signal_info.mach_info = &mach_signal_info;
-    
+
     /* Write the report */
     struct mach_exception_callback_live_cb_ctx live_ctx = {
         .sigctx = sigctx,
@@ -305,7 +305,7 @@ static kern_return_t mach_exception_callback (task_t task, thread_t thread, exce
          */
         ucontext_t uctx;
         _STRUCT_MCONTEXT mctx;
-        
+
         /* Populate the mctx */
         plcrash_async_memset(&mctx, 0, sizeof(mctx));
 
@@ -313,7 +313,7 @@ static kern_return_t mach_exception_callback (task_t task, thread_t thread, exce
         plcrash_async_memset(&uctx, 0, sizeof(uctx));
         uctx.uc_mcsize = sizeof(mctx);
         uctx.uc_mcontext = &mctx;
-    
+
         crashCallbacks.handleSignal(&si, &uctx, crashCallbacks.context);
     }
 
@@ -327,7 +327,7 @@ static kern_return_t mach_exception_callback (task_t task, thread_t thread, exce
  */
 static void image_add_callback (const struct mach_header *mh, intptr_t vmaddr_slide) {
     Dl_info info;
-    
+
     /* Look up the image info */
     if (dladdr(mh, &info) == 0) {
         NSLog(@"%s: dladdr(%p, ...) failed", __FUNCTION__, mh);
@@ -354,7 +354,7 @@ static void image_remove_callback (const struct mach_header *mh, intptr_t vmaddr
  * field, and then triggers a SIGTRAP (synchronous exception) to cause a normal
  * exception dump.
  *
- * XXX: It is possible that another crash may occur between setting the uncaught 
+ * XXX: It is possible that another crash may occur between setting the uncaught
  * exception field, and triggering the signal handler.
  */
 static void uncaught_exception_handler (NSException *exception) {
@@ -473,7 +473,7 @@ static PLCrashReporter *sharedReporter = nil;
  *
  * You may use this to submit the report to your own HTTP server, over e-mail, or even parse and
  * introspect the report locally using the PLCrashReport API.
- 
+
  * @param outError A pointer to an NSError object variable. If an error occurs, this pointer
  * will contain an error object indicating why the pending crash report could not be
  * loaded. If no error occurs, this parameter will be left unmodified. You may specify
@@ -578,8 +578,8 @@ static PLCrashReporter *sharedReporter = nil;
     assert(_applicationIdentifier != nil);
     assert(_applicationVersion != nil);
     plcrash_log_writer_init(&signal_handler_context.writer, _applicationIdentifier, _applicationVersion, [self mapToAsyncSymbolicationStrategy: _config.symbolicationStrategy], false);
-    
-    
+
+
     /* Enable the signal handler */
     switch (_config.signalHandlerType) {
         case PLCrashReporterSignalHandlerTypeBSD:
@@ -597,7 +597,7 @@ static PLCrashReporter *sharedReporter = nil;
              * EXC_CRASH. */
             if (![[PLCrashSignalHandler sharedHandler] registerHandlerForSignal: SIGABRT callback: &signal_handler_callback context: &signal_handler_context error: outError])
                 return NO;
-            
+
             /* Enable the server. */
             _machServer = [self enableMachExceptionServerWithPreviousPortSet: &_previousMachPorts
                                                                     callback: &mach_exception_callback
@@ -605,11 +605,11 @@ static PLCrashReporter *sharedReporter = nil;
                                                                        error: outError];
             if (_machServer == nil)
                 return NO;
-            
+
             /* Acquire references to the autoreleased values */
             [_machServer retain];
             [_previousMachPorts retain];
-            
+
             /*
              * MEMORY WARNING: To ensure that our instance survives for the lifetime of the callback registration,
              * we retain it here. This is necessary to ensure that the Mach exception server instance and previous port set
@@ -617,7 +617,7 @@ static PLCrashReporter *sharedReporter = nil;
              * this simply results in the reporter living forever.
              */
             [self retain];
-            
+
             /*
              * Save the previous ports. There's a race condition here, in that an exception that is delivered before (or during)
              * setting the previous port values will see a fully and/or partially configured port set. This could be an issue
@@ -692,7 +692,7 @@ static plcrash_error_t plcr_live_report_callback (plcrash_async_thread_state_t *
     /* Open the output file */
     NSString *templateStr = [NSTemporaryDirectory() stringByAppendingPathComponent: @"live_crash_report.XXXXXX"];
     char *path = strdup([templateStr fileSystemRepresentation]);
-    
+
     int fd = mkstemp(path);
     if (fd < 0) {
         plcrash_populate_posix_error(outError, errno, NSLocalizedString(@"Failed to create temporary path", @"Error opening temporary output path"));
@@ -704,7 +704,7 @@ static plcrash_error_t plcr_live_report_callback (plcrash_async_thread_state_t *
     /* Initialize the output context */
     plcrash_log_writer_init(&writer, _applicationIdentifier, _applicationVersion, [self mapToAsyncSymbolicationStrategy: _config.symbolicationStrategy], true);
     plcrash_async_file_init(&file, fd, MAX_REPORT_BYTES);
-    
+
     /* Mock up a SIGTRAP-based signal info */
     plcrash_log_bsd_signal_info_t bsd_signal_info;
     plcrash_log_signal_info_t signal_info;
@@ -714,7 +714,7 @@ static plcrash_error_t plcr_live_report_callback (plcrash_async_thread_state_t *
 
     signal_info.bsd_info = &bsd_signal_info;
     signal_info.mach_info = NULL;
-    
+
     /* Write the crash log using the already-initialized writer */
     if (thread == pl_mach_thread_self()) {
         struct plcr_live_report_context ctx = {
@@ -766,7 +766,7 @@ cleanup:
  * Generate a live crash report, without triggering an actual crash condition. This may be used to log
  * current process state without actually crashing. The crash report data will be returned on
  * success.
- * 
+ *
  * @return Returns nil if the crash report data could not be loaded.
  */
 - (NSData *) generateLiveReport {
@@ -783,13 +783,32 @@ cleanup:
  * will contain an error object indicating why the pending crash report could not be
  * generated or loaded. If no error occurs, this parameter will be left unmodified. You may specify
  * nil for this parameter, and no error information will be provided.
- * 
+ *
  * @return Returns nil if the crash report data could not be loaded.
  */
 - (NSData *) generateLiveReportAndReturnError: (NSError **) outError {
     return [self generateLiveReportWithThread: pl_mach_thread_self() error: outError];
 }
 
+
+/**
+ * Set a block of application-specific data that will be added to the crash report.
+ *
+ * This method may be called multiple times. Each call will replace any previously-set
+ * application data.
+ *
+ * @param data A block of application-specific data.
+ *
+ * @note This method can only be called after the crash reporter has been enabled.
+ */
+- (void) setApplicationData: (NSData *)data {
+	/* We can only add application data after the reporter has been enabled. */
+    if (!_enabled)
+        [NSException raise: PLCrashReporterException format: @"The crash reporter has not been enabled"];
+
+    /* Pass this data to the writer (which will make a copy) */
+    plcrash_log_writer_set_app_data(&signal_handler_context.writer, data.bytes, data.length);
+}
 
 /**
  * Set the callbacks that will be executed by the receiver after a crash has occured and been recorded by PLCrashReporter.
@@ -849,21 +868,21 @@ cleanup:
     _config = [configuration retain];
     _applicationIdentifier = [applicationIdentifier retain];
     _applicationVersion = [applicationVersion retain];
-    
+
     /* No occurances of '/' should ever be in a bundle ID, but just to be safe, we escape them */
     NSString *appIdPath = [applicationIdentifier stringByReplacingOccurrencesOfString: @"/" withString: @"_"];
-    
+
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     NSString *cacheDir = [paths objectAtIndex: 0];
     _crashReportDirectory = [[[cacheDir stringByAppendingPathComponent: PLCRASH_CACHE_DIR] stringByAppendingPathComponent: appIdPath] retain];
-    
+
     return self;
 }
 
 
 /**
  * @internal
- * 
+ *
  * Derive the bundle identifier and version from @a bundle.
  *
  * @param bundle The application's main bundle.
@@ -872,7 +891,7 @@ cleanup:
 - (id) initWithBundle: (NSBundle *) bundle configuration: (PLCrashReporterConfig *) configuration {
     NSString *bundleIdentifier = [bundle bundleIdentifier];
     NSString *bundleVersion = [[bundle infoDictionary] objectForKey: (NSString *) kCFBundleVersionKey];
-    
+
     /* Verify that the identifier is available */
     if (bundleIdentifier == nil) {
         const char *progname = getprogname();
@@ -891,7 +910,7 @@ cleanup:
         NSDEBUG(@"Warning -- bundle version unavailable");
         bundleVersion = @"";
     }
-    
+
     return [self initWithApplicationIdentifier: bundleIdentifier appVersion: bundleVersion configuration: configuration];
 }
 
@@ -934,15 +953,15 @@ cleanup:
                                 EXC_MASK_ARITHMETIC |       /* Arithmetic exception (eg, divide by zero) */
                                 EXC_MASK_SOFTWARE |         /* Software exception (eg, as triggered by x86's bound instruction) */
                                 EXC_MASK_BREAKPOINT;        /* Trace or breakpoint */
-    
+
     /* EXC_GUARD was added in xnu 13.x (iOS 6.0, Mac OS X 10.9) */
 #ifdef EXC_MASK_GUARD
     PLCrashHostInfo *hinfo = [PLCrashHostInfo currentHostInfo];
-    
+
     if (hinfo != nil && hinfo.darwinVersion.major >= 13)
         exc_mask |= EXC_MASK_GUARD; /* Process accessed a guarded file descriptor. See also: https://devforums.apple.com/message/713907#713907 */
 #endif
-    
+
     /* Create the server */
     NSError *osError;
     PLCrashMachExceptionServer *server = [[[PLCrashMachExceptionServer alloc] initWithCallBack: callback context: context error: &osError] autorelease];
@@ -950,14 +969,14 @@ cleanup:
         plcrash_populate_error(outError, PLCrashReporterErrorOperatingSystem, @"Failed to instantiate the Mach exception server.", osError);
         return nil;
     }
-    
+
     /* Allocate the port */
     PLCrashMachExceptionPort *port = [server exceptionPortWithMask: exc_mask error: &osError];
     if (port == nil) {
         plcrash_populate_error(outError, PLCrashReporterErrorOperatingSystem, @"Failed to instantiate the Mach exception port.", osError);
         return nil;
     }
-    
+
     /* Register for the task */
     if (![port registerForTask: mach_task_self() previousPortSet: previousPortSet error: &osError]) {
         plcrash_populate_error(outError, PLCrashReporterErrorOperatingSystem, @"Failed to set the target task's mach exception ports.", osError);
@@ -991,16 +1010,16 @@ cleanup:
  */
 - (plcrash_async_symbol_strategy_t) mapToAsyncSymbolicationStrategy: (PLCrashReporterSymbolicationStrategy) strategy {
     plcrash_async_symbol_strategy_t result = PLCRASH_ASYNC_SYMBOL_STRATEGY_NONE;
-    
+
     if (strategy == PLCrashReporterSymbolicationStrategyNone)
         return PLCRASH_ASYNC_SYMBOL_STRATEGY_NONE;
-    
+
     if (strategy & PLCrashReporterSymbolicationStrategySymbolTable)
         result |= PLCRASH_ASYNC_SYMBOL_STRATEGY_SYMBOL_TABLE;
-    
+
     if (strategy & PLCrashReporterSymbolicationStrategyObjC)
         result |= PLCRASH_ASYNC_SYMBOL_STRATEGY_OBJC;
-    
+
     return result;
 }
 
@@ -1009,10 +1028,10 @@ cleanup:
  */
 - (BOOL) populateCrashReportDirectoryAndReturnError: (NSError **) outError {
     NSFileManager *fm = [NSFileManager defaultManager];
-    
+
     /* Set up reasonable directory attributes */
     NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-    
+
     /* Create the top-level path */
     if (![fm fileExistsAtPath: [self crashReportDirectory]] &&
         ![fm createDirectoryAtPath: [self crashReportDirectory] withIntermediateDirectories: YES attributes: attributes error: outError])
