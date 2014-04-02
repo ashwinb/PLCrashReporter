@@ -361,6 +361,11 @@ static void uncaught_exception_handler (NSException *exception) {
     /* Set the uncaught exception */
     plcrash_log_writer_set_exception(&signal_handler_context.writer, exception);
 
+    // we don't forward the exception message / context correctly through to
+    // the debugger. so when the debugger stops, we lose this all. this is a
+    // stopgap to plug the hole.
+    NSLog(@"PLCrashReporter uncaught exception: %@", exception);
+
     /* Synchronously trigger the crash handler */
     abort();
 }
